@@ -1,6 +1,7 @@
 import cv2
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button, RectangleSelector
+from PIL import Image
 import easygui
 
 # Function to preprocess the image
@@ -51,22 +52,37 @@ def display_images(image_path):
         # Apply preprocessing to the cropped region
         cropped = crop_image(image, crop_coords)
         preprocessed_image = preprocess_image(cropped)
-        preprocessed_display = cv2.cvtColor(preprocessed_image, cv2.COLOR_GRAY2RGB)
 
-        # Update the Matplotlib plot
+        # Update the Matplotlib plot for display
+        preprocessed_display = cv2.cvtColor(preprocessed_image, cv2.COLOR_GRAY2RGB)
         img_plot.set_data(preprocessed_display)
         ax.set_title("Preprocessed Image (Cropped)")
         fig.canvas.draw()
 
-        # Save the preprocessed cropped image
-        output_path = "preprocessed_cropped_image.jpg"
-        cv2.imwrite(output_path, preprocessed_image)
-        print(f"Preprocessed cropped image saved at: {output_path}")
+    # Button click event to save the preprocessed image
+    def on_save(event):
+        # Open a file dialog to choose where to save the image
+        save_fig_path = easygui.filesavebox(title="Save Image As", default="preprocessed_cropped_image.jpg", filetypes=["*.jpg", "*.png"])
+        if save_fig_path:
+            # Apply preprocessing to the cropped region
+            cropped = crop_image(image, crop_coords)
+            preprocessed_image = preprocess_image(cropped)
+
+            # Save the preprocessed cropped image using Pillow
+            pil_image = Image.fromarray(preprocessed_image)
+            pil_image.save(save_fig_path)
+
+            print(f"Preprocessed cropped image saved at: {save_fig_path}")
 
     # Add a button to trigger preprocessing
-    ax_preprocess = plt.axes([0.4, 0.05, 0.2, 0.075])
+    ax_preprocess = plt.axes([0.3, 0.05, 0.2, 0.075])
     btn_preprocess = Button(ax_preprocess, "Preprocess")
     btn_preprocess.on_clicked(on_preprocess)
+
+    # Add a button to save the preprocessed image
+    ax_save = plt.axes([0.6, 0.05, 0.2, 0.075])
+    btn_save = Button(ax_save, "Save Image")
+    btn_save.on_clicked(on_save)
 
     # Show the Matplotlib window
     plt.show()
