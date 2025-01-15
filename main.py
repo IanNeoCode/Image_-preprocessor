@@ -3,18 +3,75 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Button, RectangleSelector
 from PIL import Image
 import easygui
+import tkinter as tk
+from tkinter import simpledialog
+
+# Default preprocessing settings
+settings = {
+    "gaussian_blur": 5,
+    "clahe_clip_limit": 2.0,
+    "clahe_tile_grid_size": 8,
+}
 
 # Function to preprocess the image
 def preprocess_image(image):
-    # Convert the image to grayscale
+    # Convert to grayscale
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    return gray_image
+
+    # Apply Gaussian Blur for noise reduction
+    blurred_image = cv2.GaussianBlur(gray_image, (settings["gaussian_blur"], settings["gaussian_blur"]), 0)
+
+    # Enhance contrast with CLAHE
+    clahe = cv2.createCLAHE(clipLimit=settings["clahe_clip_limit"], tileGridSize=(settings["clahe_tile_grid_size"], settings["clahe_tile_grid_size"]))
+    enhanced_image = clahe.apply(blurred_image)
+
+    return enhanced_image
+
 
 # Function to crop the image
 def crop_image(image, crop_coords):
     x1, y1, x2, y2 = map(int, crop_coords)
     cropped = image[y1:y2, x1:x2]
     return cropped
+
+
+# Function to open the settings page
+def open_settings():
+    def save_settings():
+        try:
+            # Update global settings
+            settings["gaussian_blur"] = int(blur_var.get())
+            settings["clahe_clip_limit"] = float(clip_limit_var.get())
+            settings["clahe_tile_grid_size"] = int(tile_grid_var.get())
+            print("Settings updated:", settings)
+            settings_window.destroy()
+        except ValueError:
+            print("Invalid input. Please check your settings.")
+
+    # Create a new Tkinter window for settings
+    settings_window = tk.Tk()
+    settings_window.title("Preprocessing Settings")
+
+    # Gaussian Blur setting
+    tk.Label(settings_window, text="Gaussian Blur Kernel Size (odd number):").grid(row=0, column=0, sticky=tk.W, padx=10, pady=5)
+    blur_var = tk.StringVar(value=str(settings["gaussian_blur"]))
+    tk.Entry(settings_window, textvariable=blur_var).grid(row=0, column=1, padx=10, pady=5)
+
+    # CLAHE Clip Limit setting
+    tk.Label(settings_window, text="CLAHE Clip Limit:").grid(row=1, column=0, sticky=tk.W, padx=10, pady=5)
+    clip_limit_var = tk.StringVar(value=str(settings["clahe_clip_limit"]))
+    tk.Entry(settings_window, textvariable=clip_limit_var).grid(row=1, column=1, padx=10, pady=5)
+
+    # CLAHE Tile Grid Size setting
+    tk.Label(settings_window, text="CLAHE Tile Grid Size:").grid(row=2, column=0, sticky=tk.W, padx=10, pady=5)
+    tile_grid_var = tk.StringVar(value=str(settings["clahe_tile_grid_size"]))
+    tk.Entry(settings_window, textvariable=tile_grid_var).grid(row=2, column=1, padx=10, pady=5)
+
+    # Save button
+    tk.Button(settings_window, text="Save", command=save_settings).grid(row=3, column=0, columnspan=2, pady=10)
+
+    settings_window.mainloop()
+
 
 # Function to display the original and preprocessed images
 def display_images(image_path):
@@ -62,7 +119,8 @@ def display_images(image_path):
     # Button click event to save the preprocessed image
     def on_save(event):
         # Open a file dialog to choose where to save the image
-        save_fig_path = easygui.filesavebox(title="Save Image As", default="preprocessed_cropped_image.jpg", filetypes=["*.jpg", "*.png"])
+        save_fig_path = easygui.filesavebox(title="Save Image As", default="preprocessed_cropped_image.jpg",
+                                            filetypes=["*.jpg", "*.png"])
         if save_fig_path:
             # Apply preprocessing to the cropped region
             cropped = crop_image(image, crop_coords)
@@ -75,17 +133,23 @@ def display_images(image_path):
             print(f"Preprocessed cropped image saved at: {save_fig_path}")
 
     # Add a button to trigger preprocessing
-    ax_preprocess = plt.axes([0.3, 0.05, 0.2, 0.075])
+    ax_preprocess = plt.axes([0.2, 0.05, 0.2, 0.075])
     btn_preprocess = Button(ax_preprocess, "Preprocess")
     btn_preprocess.on_clicked(on_preprocess)
 
+    # Add a button to open settings
+    ax_settings = plt.axes([0.5, 0.05, 0.2, 0.075])
+    btn_settings = Button(ax_settings, "Settings")
+    btn_settings.on_clicked(lambda event: open_settings())
+
     # Add a button to save the preprocessed image
-    ax_save = plt.axes([0.6, 0.05, 0.2, 0.075])
+    ax_save = plt.axes([0.8, 0.05, 0.2, 0.075])
     btn_save = Button(ax_save, "Save Image")
     btn_save.on_clicked(on_save)
 
     # Show the Matplotlib window
     plt.show()
+
 
 if __name__ == "__main__":
     # Open a file dialog to select the image
